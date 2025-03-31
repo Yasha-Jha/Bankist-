@@ -62,9 +62,12 @@ const inputCloseUsername = document.querySelector(".form__input--user");
 const inputClosePin = document.querySelector(".form__input--pin");
 
 //     -------Display Movements Dynamically In UI of Deposit and Withdrawal----------
-const displayMovements = function (movements) {
+const displayMovements = function (movements, sort = false) {
   containerMovements.innerHTML = "";
-  movements.forEach((mov, i) => {
+
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+
+  movs.forEach((mov, i) => {
     const type = mov > 0 ? "deposit" : "withdrawal";
     const html = `
         <div class="movements__row">
@@ -80,9 +83,9 @@ const displayMovements = function (movements) {
 };
 
 //  --------- Calculate the Current Balance and Display it-------------
-const calcDisplayBlance = function (movements) {
-  const balance = movements.reduce((acc, mov) => acc + mov, 0);
-  labelBalance.textContent = `${balance} EUR`;
+const calcDisplayBlance = function (acc) {
+  acc.balance = acc.movements.reduce((acc, mov) => acc + mov, 0);
+  labelBalance.textContent = `${acc.balance} EUR`;
 };
 
 //  --------- Calculate the In, Out, Interest Balance and Display it-------------
@@ -117,6 +120,14 @@ const createUsernames = function (accounts) {
 };
 createUsernames(accounts);
 
+//  -------------Update UI (display movements, balance, summary)----------
+const updateUI = function (acc) {
+  // Display movements , blance, summary
+  displayMovements(acc.movements);
+  calcDisplayBlance(acc);
+  calcDisplaySummary(acc);
+};
+
 //   *****************Event Handler*******************
 let currentAccount;
 
@@ -138,12 +149,89 @@ btnLogin.addEventListener("click", function (e) {
     inputLoginUsername.value = inputLoginPin.value = "";
     inputLoginPin.blur();
 
-    // Display movements , blance, summary
-    displayMovements(currentAccount.movements);
-    calcDisplayBlance(currentAccount.movements);
-    calcDisplaySummary(currentAccount);
+    // Update UI
+    updateUI(currentAccount);
   }
 });
+
+//  ----------Button Transfer MOney-----------
+btnTransfer.addEventListener("click", function (e) {
+  e.preventDefault();
+  const amount = Number(inputTransferAmount.value);
+  const receiverAcc = accounts.find(
+    (acc) => acc.username === inputTransferTo.value
+  );
+
+  inputTransferAmount.value = inputTransferTo.value = "";
+
+  if (
+    amount > 0 &&
+    currentAccount.balance >= amount &&
+    receiverAcc?.username !== currentAccount.username
+  ) {
+    // Transfer the amount
+    currentAccount.movements.push(-amount);
+    receiverAcc.movements.push(amount);
+
+    // Update UI
+    updateUI(currentAccount);
+  }
+});
+
+btnSort.addEventListener("click", function (e) {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, true);
+});
+
+//  ------------Button To Get Loan-------------
+
+btnLoan.addEventListener("click", function (e) {
+  e.preventDefault();
+
+  const amount = Number(inputLoanAmount.value);
+
+  if (
+    amount > 0 &&
+    currentAccount.movements.some((mov) => mov >= amount * 0.1)
+  ) {
+    // Add Loan Amount
+    currentAccount.movements.push(amount);
+
+    // Update UI
+    updateUI(currentAccount);
+  }
+});
+
+//  ------------Button Close Account---------------
+
+btnClose.addEventListener("click", function (e) {
+  e.preventDefault();
+
+  if (
+    inputCloseUsername.value === currentAccount.username &&
+    Number(inputClosePin.value) === currentAccount.pin
+  ) {
+    const index = accounts.findIndex(
+      (acc) => acc.username === currentAccount.username
+    );
+
+    // Delete Account
+    accounts.splice(index, 1);
+
+    //  Hide UI
+    containerApp.style.opacity = 0;
+  }
+
+  inputCloseUsername.value = inputClosePin.value = "";
+});
+
+let sorted = false;
+btnSort.addEventListener("click", function (e) {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, !sorted);
+  sorted = !sorted;
+});
+
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
 // LECTURES
@@ -172,4 +260,81 @@ const maxValue = movements.reduce((acc, mov) => {
   else return mov;
 }, movements[0]);
 
+console.log(movements.includes(-130));
+
+console.log(movements.some((mov) => mov > 0));
+// console.log(movements.some(mov=>mov>0));
+
+console.log(movements.every((mov) => mov > 0));
+console.log(account4.movements.every((mov) => mov > 0));
+
 /////////////////////////////////////////////////
+const breeds = [
+  {
+    breed: "German Shepherd",
+    averageWeight: 32,
+    activities: ["fetch", "swimming"],
+  },
+  {
+    breed: "Dalmatian",
+    averageWeight: 24,
+    activities: ["running", "fetch", "agility"],
+  },
+  {
+    breed: "Labrador",
+    averageWeight: 28,
+    activities: ["swimming", "fetch"],
+  },
+  {
+    breed: "Beagle",
+    averageWeight: 12,
+    activities: ["digging", "fetch"],
+  },
+  {
+    breed: "Husky",
+    averageWeight: 26,
+    activities: ["running", "agility", "swimming"],
+  },
+  {
+    breed: "Bulldog",
+    averageWeight: 36,
+    activities: ["sleeping"],
+  },
+  {
+    breed: "Poodle",
+    averageWeight: 18,
+    activities: ["agility", "fetch"],
+  },
+];
+
+const allActivities = breeds.flatMap((breed) => breed.activities);
+console.log(allActivities);
+
+const uniqueActivities = [...new Set(allActivities)];
+console.log(uniqueActivities);
+
+const swimmingAdjacent = [
+  ...new Set(
+    breeds
+      .filter((breed) => breed.activities.includes("swimming"))
+      .flatMap((act) => act.activities)
+  ),
+];
+console.log(swimmingAdjacent);
+
+console.log(breeds.every((breed) => breed.averageWeight >= 10));
+
+console.log(breeds.some((breed) => breed.activities.length >= 3));
+
+const heaviestBreed = breeds
+  .filter((breed) => breed.activities.includes("fetch"))
+  .map((breed) => breed.averageWeight);
+console.log(Math.max(...heaviestBreed));
+console.log(...heaviestBreed);
+
+// Array Grouping
+
+const groupMovements = Object.groupBy(movements, (mov) =>
+  mov > 0 ? "Deposits" : "Withdrawals"
+);
+console.log(groupMovements);
